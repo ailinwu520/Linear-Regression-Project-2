@@ -1,0 +1,742 @@
+---
+title: "Project 2"
+author: "Ailin Wu"
+date: "2023-11-12"
+output:
+  pdf_document: 
+    latex_engine: xelatex
+  html_document:
+    df_print: paged
+---
+
+#Data exploration and data splitting.
+```{r}
+#1
+data <- read.table("/Users/ailin3/Downloads/diabetes.txt", header = TRUE, 
+                   stringsAsFactors = FALSE)
+head(data)
+
+#quantitative variables: chol, stab.glu, hdl, ratio, glyhb, age, height, weight, 
+# bp.1s, bp.1d, waist, hip, time.ppn
+#qualitative variables: location, gender, frame
+
+quan <- c("chol", "stab.glu", "hdl", "ratio", "glyhb", "age", "height", 
+          "weight", "bp.1s", "bp.1d", "wasit", "hip", "time.ppn")
+qual <- c("location", "gender", "frame")
+
+#histogram for quantitative variables 
+library(tidyr)
+library(ggplot2)
+g1 = ggplot(data, aes(x = chol)) + 
+  geom_histogram(bins = 20, color = "black", fill = "white")
+# chol seems normal with a slight skew to the right. 
+
+g2 = ggplot(data, aes(x = stab.glu)) + 
+  geom_histogram(bins = 20, color = "black", fill = "white") 
+# stab.glu is skewed to the right. 
+
+g3 = ggplot(data, aes(x = hdl)) + 
+  geom_histogram(bins = 20, color = "black", fill = "white") 
+# hdl seems normal with a slight skew to the right.
+
+g4 = ggplot(data, aes(x = ratio)) + 
+  geom_histogram(bins = 20, color = "black", fill = "white") 
+# ratio is skewed to the right. 
+
+g5 = ggplot(data, aes(x = glyhb)) + 
+  geom_histogram(bins = 20, color = "black", fill = "white") 
+# glyhb is skewed to the right. 
+
+g6 = ggplot(data, aes(x = age)) + 
+  geom_histogram(bins = 20, color = "black", fill = "white") 
+# age seems uniformed with a slight skew to the right. 
+
+g7 = ggplot(data, aes(x = height)) + 
+  geom_histogram(bins = 20, color = "black", fill = "white") 
+# height seems normal with a slight skew to the left. 
+
+g8 = ggplot(data, aes(x = weight)) + 
+  geom_histogram(bins = 20, color = "black", fill = "white") 
+# weight seems normal with a slight skew to the right. 
+
+g9 = ggplot(data, aes(x = bp.1s)) + 
+  geom_histogram(bins = 20, color = "black", fill = "white") 
+# bp.1s seems normalwith a slight skew to the right. 
+
+g10 = ggplot(data, aes(x = bp.1d)) + 
+  geom_histogram(bins = 20, color = "black", fill = "white") 
+# bp.1d seems normal with a slight skew to the right.
+
+g11 = ggplot(data, aes(x = waist)) + 
+  geom_histogram(bins = 20, color = "black", fill = "white") 
+# waist seems normal with a slight skew to the right. 
+
+g12 = ggplot(data, aes(x = hip)) + 
+  geom_histogram(bins = 20, color = "black", fill = "white") 
+# hip seems normal with a slight skew to the right. 
+
+g13 = ggplot(data, aes(x = time.ppn)) + 
+  geom_histogram(bins = 20, color = "black", fill = "white") 
+# time.ppn is skewed to the right. 
+
+library(ggpubr)
+ggarrange(g1, g2,g3, g4, g5, g6, g7, g8, g9, g10, g11, g12, g13, 
+          nrow = 3, ncol = 3)
+```
+```{r}
+#pie chart for each qualitative variables
+# comment on how its classes are distributed?
+
+p1 = pie(table(data$location))
+# There are more people from Louisa than Buckingham, it is about 1/2 and 1/2. 
+
+p2 = pie(table(data$gender))
+# There are more female than male, roughly 3/5 are female and 2/5 are male. 
+
+p3 = pie(table(data$frame))
+# There are more medium compared with large or small, about less and 
+# a 1/2 is medium, about 1/4 is large, and about 1/4 is small. 
+
+```
+```{r, fig.width=16, fig.height=16}
+# scatterplot matrix and obtain the pairwise correlation matrix for 
+# all quantitative variables in the data
+
+library(GGally) 
+Scatter_Matrix <- ggpairs(data,columns = c(1, 2, 3, 4, 5, 7, 9, 10, 12, 
+                                           13, 14, 15, 16), 
+                          title = "Scatter Plot Matrix", 
+                          axisLabels = "show") 
+ggsave("Scatter plot matrix.png", Scatter_Matrix, width = 7, 
+       height = 7, units = "in") 
+Scatter_Matrix
+
+```
+```{r}
+cor(data[, colnames(data) %in% quan])
+# There are high correlations matrix between weight and waist, weight and hip, waist and hip. This causes multicolinearity down the road. 
+```
+
+```{r}
+#2. 
+model1 <- lm(glyhb ~ ., data = data)
+summary(model1)
+
+# Diagnostic plots:
+
+# Scatter plot 
+plot(x = fitted(model1), y = residuals(model1), main = "Scatterplot of Model 1")
+# The linearity assumption of the scatter plot shows there is no linear 
+# relationship between X an Y, fanning out and it is heteroskedasticity.
+
+# Normal Q-Q plot
+plot(model1, which = 2, main="Normal Q-Q Plot")
+# The QQ plot has the observation quantile is under the theoretical line, 
+# so the distribution of residual is heavy tailed, the inference is over powered.
+
+# Histogram of Errors
+hist(residuals(model1), main = "Histogram of Residuals", xlab = "Residuals",
+     breaks = 50)
+# The histogram seems roughly normal with a slight skew to the right. 
+
+# Residuals vs Fitted
+plot(model1, which = 1, main="Residuals vs Fitted")
+# The equal variance assumption of the residual plot does not hold 
+# because there is a presence of a pattern fanning out, which is heterokedasticity.
+
+
+```
+
+```{r}
+#3 
+library(MASS)
+par(mfrow = c(1,1))
+qqnorm(model1$residuals)
+qqline(model1$residuals)
+
+BC = boxcox(model1,lambda = seq(-6,6,0.1), plotit = FALSE)
+lambda = BC$x[which.max(BC$y)]
+#To see the value of lambda
+lambda 
+# its -0.9, which is close to -1. 
+
+#boxcox transformation on glyhb
+data$glybh.t = 1 / data$glyhb
+names(data)
+data = data[,-5] # take out glyhb 
+
+# Regress glyhb∗ on all predictor variables (Model 2)
+model2 = lm(glybh.t ~ ., data = data)
+
+par(mfrow = c(1,1))
+qqnorm(model2$residuals)
+qqline(model2$residuals)
+
+# I would be worried about tails because of the heavy but 
+# the confidence interval would be a little lower and anti conservative. 
+
+#Boxcox on model2
+BC2 = boxcox(model2,lambda = seq(-6,6,0.1), plotit = FALSE)
+lambda2 = BC2$x[which.max(BC2$y)]
+#To see the value of lambda2
+lambda2 
+# its 0.9, which is close to 1. 
+
+# After I did the boxcox transformation again on model2, 
+# its close to 1, so no more transformation is needed. 
+
+```
+
+```{r}
+#4
+set.seed(372)
+
+# Number of rows in your dataset
+n_rows <- nrow(data)
+
+# Create an index for the training dataset (70%)
+train_index <- sample(1:n_rows, 0.7 * n_rows)
+
+# Create the training dataset
+training_data <- data[train_index, ]
+
+# Create the validation dataset
+test_data <- data[-train_index, ]
+
+```
+
+#Selection of first-order effects.
+```{r}
+#5
+# Model 3: Fit a model with all first-order effects
+model3 <- lm(glybh.t ~ ., data = training_data)
+
+# Number of regression coefficients in Model 3
+num_coefficients_m3 <- length(coef(model3))
+
+# Mean Squared Error (MSE) from Model 3
+# ((nrow(training_data)-num_coefficients) = (n-p))
+mse_model3 <- (sum(residuals(model3)^2))/ (nrow(training_data)-num_coefficients_m3)
+
+# Print the results
+cat("Number of coefficients in Model 3:", num_coefficients_m3, "\n")
+cat("MSE from Model 3:", mse_model3, "\n")
+
+```
+
+```{r}
+#6. 
+model3
+library(leaps)
+all.models = regsubsets(glybh.t ~ ., data = training_data, nbest = 1, nvmax = 16)
+
+summary_stuff = summary(all.models)
+names_of_data = c("Y",colnames(summary_stuff$which)[-1])
+n = nrow(training_data) 
+K = nrow(summary_stuff$which)
+
+nicer = lapply(1:K,function(i){
+  model = paste(names_of_data[summary_stuff$which[i,]],collapse = ",")
+  p = sum(summary_stuff$which[i,])
+  BIC = summary_stuff$bic[i]
+  AIC = summary_stuff$bic[i] - (log(n)* p) + 2*p
+  CP = summary_stuff$cp[i]
+  R2adj = summary_stuff$adjr2[i]
+  SSE = summary_stuff$rss[i]
+  R2 = summary_stuff$rsq[i]
+  results = data.frame(model,p,CP,AIC, BIC, R2adj, SSE, R2)
+  
+  return(results)
+})
+nicer = Reduce(rbind,nicer)
+nicer
+
+# NOTES:
+# if CP close to P, then it's good. 
+# if CP is less than P, the MSE maybe overestimated and the full model maybe bias. 
+
+# The best model would be: Y ~ stab.glu + ratio + age + waist
+# For the best model according to CP, the CP value is 5.077535,  
+# which is closest to P of 5 and I will not be not worried about
+# the full model being under fit because CP is the closet to P. 
+
+```
+```{r}
+#7
+#model 3.1, 3.2, 3.3:
+#AIC selected
+model3.1 = lm(glybh.t ~ stab.glu + ratio + age + waist + time.ppn, 
+              data = training_data, x = T)
+#BIC selected
+model3.2 = lm(glybh.t ~ stab.glu + age + waist, data = training_data, x = T)
+#AdjR^2 selected
+model3.3 = lm(glybh.t ~ chol + stab.glu + hdl + age + gender + height + waist 
+              + time.ppn, data = training_data, x = T)
+
+```
+
+#Selection of first- and second- order effects.
+```{r}
+#8
+# Model 4: Fit a model with all first-order effects
+model4 <- lm(glybh.t ~ .^2, data = training_data)
+
+# Number of regression coefficients in Model 4
+num_coefficients_m4 <- length(coef(model4))
+
+# Mean Squared Error (MSE) from Model 4
+mse_model4<- (sum(residuals(model4)^2))/ (nrow(training_data) - num_coefficients_m4)
+
+# Print the results
+cat("Number of coefficients in Model 4:", num_coefficients_m4, "\n")
+cat("MSE from Model 4:", mse_model4, "\n")
+
+# I do have concerns about the fit of this model because it includes
+# 2 way interaction effect, which leads to a large number of coefficients 
+# and may result in over fitting. 
+
+
+```
+
+
+
+```{r, echo = TRUE}
+#9
+#install packages
+library(glmnet)
+
+# design matrices and the response 
+x = model.matrix(glybh.t ~ .^2, data = training_data)[, -1]
+y = training_data$glybh.t
+
+# ridge regression
+lambdas <- c(0.01, 0.1, 1, 10, 100)
+model4.1 = glmnet(x = x, y = y, alpha = 0, lambda = lambdas)
+plot(model4.1, xvar = "lambda")
+
+# cross validation to select the best value of lamda
+#Randomly select a training and test set.
+#train_index
+#test_index = (- train_index)
+#y.train = y[train_index]
+#y.test = y[test_index]
+#x.train = model.matrix(glybh.t ~.^2, data = training_data)[, -1] #drop intercept
+#x.test = model.matrix(glybh.t ~.^2, data = test_data)[, -1] #drop intercept
+
+n_rows <- nrow(training_data)
+train_index = sample(1:n_rows, 0.7 * n_rows)
+test_index = setdiff(1:n_rows, train_index)
+y.train = y[train_index]
+y.test = y[test_index]
+
+x.train = model.matrix(glybh.t ~.^2, data = training_data)[train_index, -1] # drop intercept
+x.test = model.matrix(glybh.t ~.^2, data = training_data)[test_index, -1]   # drop intercept
+
+#Now, fit a Ridge regression model to the training data
+model4.1.train = glmnet(x.train, y.train, alpha = 0, lambda = lambdas)
+
+#Let's perform cross validation to choose the best model
+?cv.glmnet
+
+#Perform cross validation on the training set to select the best lambda
+cv.out = cv.glmnet(x.train, y.train, alpha = 0, lambda = lambdas)
+plot(cv.out)
+
+#Find the best lambda value
+best.lambda.ridge = cv.out$lambda.min
+best.lambda.ridge
+plot(cv.out)
+abline(v = log(best.lambda.ridge), col = "blue", lwd = 2)
+
+#Calculate the MSPE of the model on the test set
+ridge.pred = predict(model4.1.train, s = best.lambda.ridge, newx = x.test)
+mspe.ridge = mean((ridge.pred - y.test)^2)
+mspe.ridge
+
+#Fit the final model to the entire data set using the chosen lambda
+final.model = glmnet(x.train, y.train, alpha = 0, lambda = best.lambda.ridge)
+Coef.Ridge = coef(final.model)
+Coef.Ridge
+p = length(Coef.Ridge) - 1
+
+```
+
+```{r}
+#10
+#First, let's look at the shrinkage effects of Lasso on the entire data set
+lambdas <- c(0.01, 0.1, 1, 10, 100)
+model4.2a = glmnet(x.train, y.train, alpha = 1, lambda = lambdas)
+plot(model4.2a, xvar = "lambda")
+
+#Now, fit a Lasso regression model to the training data
+model4.2a.train = glmnet(x.train, y.train, alpha = 1, lambda = lambdas)
+
+#Perform cross validation on the training set to select the best lambda
+cv.out = cv.glmnet(x.train, y.train, alpha = 1, lambda = lambdas)
+plot(cv.out)
+
+#Find the best lambda value
+best.lambda.lasso = cv.out$lambda.min
+best.lambda.lasso
+plot(cv.out)
+abline(v = log(best.lambda.lasso), col = "blue", lwd = 2)
+
+model4.2 = lm(glybh.t ~ chol + stab.glu + age + 
+                          ratio + bp.1s + waist + chol:stab.glu +
+                          stab.glu:age + stab.glu:bp.1s + stab.glu:waist + 
+                          ratio:age + age:waist, 
+                          data = training_data)
+
+#Calculate the MSPE of the model on the test set
+lasso.pred = predict(model4.2, newdata  = as.data.frame(x.test))
+mspe.lasso = mean((lasso.pred - y.test)^2)
+mspe.lasso
+```
+
+```{r}
+#11
+cat("Ridge regression adds square penalty term of beta square, while LASSO 
+    regression adds an absolute term of |beta|. Ridge regression tends to shrink 
+    coefficients towards zero, but not exactly to zero, while LASSO regression 
+    can shrink some coefficients to zero leading to feature selection. Ridge 
+    regression are more suitable when multicollinearity is presented and all 
+    features are expected to contribute. LASSO regression are suitable when 
+    feature selection is desired or when there is a belief that some features 
+    are irrelevant. In conclusion, Ridge regression is effective when 
+    multicollinearity is a concern, while LASSO is particularly useful 
+    when feature selection is a priority.")
+```
+
+#Model validation.
+```{r}
+#12
+#PRESS = sum( yi - yhat (i))^2
+# yhat(i) = regression leaving out (xi, yi)
+#         = refit the ridge
+# sum = MLR = sum ((yi - yhati)^2/ (1 - hii)^2)
+
+#PRESS for Model 3.1, 3.2, and 3.3
+press.mod3.1 = sum(model3.1$residuals^2 / (1 - influence(model3.1)$hat)^2)
+sse.mod3.1 = sum(model3.1$residuals^2)
+
+press.mod3.2 = sum(model3.2$residuals^2 / (1 - influence(model3.2)$hat)^2)
+sse.mod3.2 = sum(model3.2$residuals^2)
+
+press.mod3.3 = sum(model3.3$residuals^2 / (1 - influence(model3.3)$hat)^2)
+sse.mod3.3 = sum(model3.3$residuals^2)
+
+# Printing the PRESS and SSE values
+cat("PRESS for Model 3.1: ", press.mod3.1,", ", "SSE for Model 3.1: ", 
+    sse.mod3.1,  "\n")
+cat("PRESS for Model 3.2: ", press.mod3.2,", ", "SSE for Model 3.2: ", 
+    sse.mod3.2, "\n")
+cat("PRESS for Model 3.3: ", press.mod3.3, ", ", "SSE for Model 3.3: ", 
+    sse.mod3.3, "\n")
+
+
+#PRESS for Model 4.1 and 4.2
+#(Leave-One-Out Cross-Validation)
+loocv_function <- function(model, X, y) {
+  n <- nrow(X)
+  press_values <- numeric(n)
+  
+  for (i in 1:n) {
+    X_i <- X[-i, ]  # leave out observation i
+    y_i <- y[-i]
+    
+    model_i <- glmnet(X_i, y_i, alpha = 0, lambda = best.lambda.ridge)
+    
+    x_i_pred <- predict(model_i, newx = X[i, ])
+    press_values[i] <- (y[i] - x_i_pred)^2
+  }
+  
+  press <- sum(press_values)
+  return(press)
+}
+
+# Applying the LOOCV function to Models 4.1 and 4.2
+press_model4.1 <- loocv_function(model4.1.train, x, y)
+sse.mod4.1 = sum(model4.1$residuals^2)
+
+press.mod4.2 = sum(model4.2$residuals^2 / (1 - influence(model4.2)$hat)^2)
+sse.mod4.2 = sum(model4.2$residuals^2)
+
+# Printing the PRESS values
+cat("PRESS for Model 4.1:", press_model4.1, ", ", "SSE for Model 4.1: ", 
+    sse.mod4.1, "\n")
+cat("PRESS for Model 4.2: ", press.mod4.2, ", ", "SSE for Model 4.2: ", 
+    sse.mod4.2, "\n")
+
+```
+
+```{r}
+#13
+#MSPE = 1/n * sum( yi - yhat (i))^2
+predict.model3.1 = predict(model3.1 , newdata = test_data[,-16])
+MSPE.model3.1 <- mean((predict.model3.1 - y.test)^2)
+
+predict.model3.2 = predict(model3.2 , newdata = test_data[,-16])
+MSPE.model3.2 <- mean((predict.model3.2 - y.test)^2)
+
+predict.model3.3 = predict(model3.3 , newdata = test_data[,-16])
+MSPE.model3.3 <- mean((predict.model3.3 - y.test)^2)
+
+predict.model4.1 = predict(model4.1 , s = best.lambda.ridge,  newx = x.test)
+MSPE.model4.1 <- mean((predict.model4.1 - y.test)^2)
+
+predict.model4.2 = predict(model4.2 , newdata = test_data[,-16])
+MSPE.model4.2 <- mean((predict.model4.2 - y.test)^2)
+
+# Printing the MSPE values
+cat("MSPE for Model 3.1:", MSPE.model3.1 , ", ", 
+    "compared with PRESS/n for Model 3.1: ", press.mod3.1/nrow(training_data),  "\n")
+cat("MSPE for Model 3.2:", MSPE.model3.2 , ", ", 
+    "compared with PRESS/n for Model 3.2: ", press.mod3.2/nrow(training_data),  "\n")
+cat("MSPE for Model 3.3:", MSPE.model3.3 , ", ",
+    "compared with PRESS/n for Model 3.3: ", press.mod3.3/nrow(training_data),  "\n")
+cat("MSPE for Model 4.1:", MSPE.model4.1 , ", ", 
+    "compared with PRESS/n for Model 4.1: ", press_model4.1/nrow(training_data), "\n")
+cat("MSPE for Model 4.2:", MSPE.model4.2 , ", ", 
+    "compared with PRESS/n for Model 4.2: ", press.mod4.2/nrow(training_data), "\n")
+
+# MSPE is slightly smaller compared with PRESS/n. model 3.1 has the 
+# smallest MSPE for both internal and external validation. 
+
+```
+
+```{r}
+#14
+# Fit the final model using the entire dataset for Model 3.1
+model5 <- lm(glybh.t ~ stab.glu + ratio + age + waist + time.ppn, data = data, x = T)
+
+cat("The fitted regression function:\n")
+cat("1/glybh ~ 3.446e-01 + (-4.943e-04 )X1 + (-3.731e-03)X2 + (-6.576e-04)X3 
+    + (-1.116e-03)X4 + (-1.359e-05)X5\n")
+cat("or 1/glybh ~ 3.446e-01 - 4.943e-04*stab.glu - 3.731e-03*ratio - 
+    6.576e-04*age - 1.116e-03*waist - 1.359e-05*time.ppn\n")
+cat("\n")
+
+# Display the fitted regression function
+cat("Summary:")
+summary(model5)
+
+cat("\nInterpretation:\n")
+
+cat("\nintercept (3.446e-01):\n")
+cat("The intercept (3.446e-01) represents the estimated 1/glybh 
+    when all other predictors are zero. In this context, it doesn't have a 
+    meaningful interpretation as it is unlikely for the predictors to be 
+    exactly zero in this study.\n")
+
+cat("\nstab.glu (-4.943e-04):\n")
+g1 = ggplot(data, aes(x = stab.glu, y = glybh.t)) + 
+  geom_point() + 
+  geom_vline(xintercept = 150) + 
+  geom_hline(yintercept = 1/6.5, color = "red")
+g1
+library(tidyverse)
+bl = nrow(filter(data, (data$glybh.t < 1/6.5) & (data$stab.glu < 150)))
+l = nrow(filter(data,  (data$stab.glu < 150)))  
+bl_ratio <- bl / l
+br = nrow(filter(data, (data$glybh.t < 1/6.5) & (data$stab.glu >= 150)))
+r = nrow(filter(data,  (data$stab.glu >= 150)))
+br_ratio <- br / r
+cat("We consider glyhb as Glycosolated Hemoglobin levels greater than 70 as a 
+    positive diagnosis of diabetes. glybh.t = 1/70 is approximately 0.01428571428 
+    and any value below this threshold would be considered higher diabetes risk. 
+    Values below 1/5.7 (approximately 0.1754386) and 1/6.5 (approximately 0.1538462) 
+    would be considered as prediabetes. Values below 1/6.5 would be classified 
+    as diabetes. The plot shows the relationship between stable glucose levels 
+    (stab.glu) and transformed glycosylated hemoglobin levels (glybh.t). Vertical 
+    line at 150: A vertical line is drawn at the threshold of 150 for stable 
+    glucose level (stab.glu), indicating a potential threshold for categorization. 
+    Horizontal line at 1/6.5: A horizontal line is drawn at the threshold of 1/6.5, 
+    representing the transformed glycosylated hemoglobin level. Values below this 
+    line indicate diabetes. The data is divided into two rectangles based on the 
+    thresholds: Bottom-Left Rectangle (stab.glu < 150 and glybh.t < 1/6.5): This 
+    region represents individuals with stable glucose levels less than 150 and 
+    transformed glycosylated hemoglobin levels less than 1/6.5. The ratio of 
+    diabetic individuals in this region is calculated as follows:\n")
+cat("- Out of all patients with stable glucose levels less than 150, approximately", 
+    bl_ratio, "are diabetic.\n")
+cat("Bottom-Right Rectangle (stab.glu >= 150 and glybh.t < 1/6.5): This region 
+    represents individuals with stable glucose levels greater than or equal to 
+    150 and transformed glycosylated hemoglobin levels less than 1/6.5. The ratio 
+    of diabetic individuals in this region is calculated as follows:\n")
+cat("- Out of all patients with stable glucose levels greater than or equal to 
+    150, approximately", br_ratio, "are diabetic.\n")
+cat("The threshold of 150 for stable glucose levels seems to be a reasonable 
+    cutoff, as it visually separates individuals into two regions with different 
+    diabetes prevalence rates. The rectangles provide insights into the diabetic 
+    ratio in each region, supporting the choice of 150 as a meaningful threshold 
+    for categorization. For every one-unit increase in stab.glu (Stable Glucose level), 
+    the estimated 1/glybh decreases by -4.943e-04. This implies that higher 
+    stable glucose levels are associated with lower levels of glycosylated 
+    hemoglobin (glybh), which aligns with the expectation in diabetes studies.\n")
+
+cat("\nratio (-3.731e-03):\n")
+g2 = ggplot(data, aes(x = ratio, y = glybh.t)) + 
+  geom_point() + 
+  geom_vline(xintercept = 10)+ 
+  geom_hline(yintercept = 1/6.5, color = "red")
+g2
+bl = nrow(filter(data, (data$glybh.t < 1/6.5) & (data$ratio < 10)))
+l = nrow(filter(data,  (data$ratio < 10)))  
+bl_ratio <- bl / l
+br = nrow(filter(data, (data$glybh.t < 1/6.5) & (data$ratio >= 10)))
+r = nrow(filter(data,  (data$ratio >= 10)))
+br_ratio <- br / r
+cat("For every one-unit increase in ratio, the estimated 1/glybh decreases by 
+    -3.731e-03. This suggests that a higher ratio is associated with lower levels 
+    of glycosylated hemoglobin. The plot shows the relationship between the ratio 
+    and transformed glycosylated hemoglobin levels. Vertical line at 10: A vertical 
+    line is drawn at the threshold of 10 for the ratio, indicating a potential 
+    threshold for categorization. Horizontal line at 1/6.5: A horizontal line is 
+    drawn at the threshold of 1/6.5, representing the transformed glycosylated 
+    hemoglobin level. Values below this line indicate diabetes. The data is 
+    divided into two rectangles based on the thresholds: Bottom-Left Rectangle 
+    (ratio < 10 and glybh.t < 1/6.5): This region represents individuals with a 
+    ratio less than 10 and transformed glycosylated hemoglobin levels less than 
+    1/6.5. The ratio of diabetic individuals in this region is calculated as 
+    follows:\n")
+cat("- Out of all patients with a ratio less than 10, approximately", bl_ratio, 
+    "are diabetic.\n")
+cat("Bottom-Right Rectangle (ratio >= 10 and glybh.t < 1/6.5): This region 
+    represents individuals with a ratio greater than or equal to 10 and 
+    transformed glycosylated hemoglobin levels less than 1/6.5. The ratio of 
+    diabetic individuals in this region is calculated as follows:\n")
+cat("- Out of all patients with a ratio greater than or equal to 10, approximately", 
+    br_ratio, "are diabetic.\n")
+cat("Similar to stab.glu, the threshold of 10 for the ratio seems to be a 
+    reasonable cutoff, as it visually separates individuals into two regions 
+    with different diabetes prevalence rates. The rectangles provide insights 
+    into the diabetic ratio in each region, supporting the choice of 10 as a
+    meaningful threshold for categorization.")
+
+cat("\nage (-6.576e-04):\n")
+g3 = ggplot(data, aes(x = age, y = glybh.t)) + 
+  geom_point() + 
+  geom_vline(xintercept = 45)+ 
+  geom_hline(yintercept = 1/6.5, color = "red")
+g3
+bl = nrow(filter(data, (data$glybh.t < 1/6.5) & (data$age < 10)))
+l = nrow(filter(data,  (data$age < 10)))  
+bl_ratio <- bl / l
+br = nrow(filter(data, (data$glybh.t < 1/6.5) & (data$age >= 10)))
+r = nrow(filter(data,  (data$age >= 10)))
+br_ratio <- br / r
+cat("For every one-unit increase in age, the estimated 1/glybh decreases 
+    by -6.576e-04. This suggests that higher age is associated with lower 
+    levels of glycosylated hemoglobin. The plot shows the relationship between
+    age and transformed glycosylated hemoglobin levels. Vertical line at 45: 
+    A vertical line is drawn at the threshold of 45 for age, indicating a 
+    potential threshold for categorization. Horizontal line at 1/6.5: A horizontal 
+    line is drawn at the threshold of 1/6.5, representing the transformed 
+    glycosylated hemoglobin level. Values below this line indicate diabetes. 
+    The data is divided into two rectangles based on the thresholds: Bottom-Left 
+    Rectangle (age < 45 and glybh.t < 1/6.5): This region represents individuals 
+    with age less than 45 and transformed glycosylated hemoglobin levels less 
+    than 1/6.5.The ratio of diabetic individuals in this region is calculated 
+    as follows:\n")
+cat("- Out of all patients with age less than 45, approximately", bl_ratio, 
+    "are diabetic.\n")
+cat("Bottom-Right Rectangle (age >= 45 and glybh.t < 1/6.5): This region 
+    represents individuals with age greater than or equal to 45 and transformed 
+    glycosylated hemoglobin levels less than 1/6.5. The ratio of diabetic 
+    individuals in this region is calculated as follows:\n")
+cat("- Out of all patients with age greater than or equal to 45, approximately",
+    br_ratio, "are diabetic.\n")
+cat("Similar to stab.glu and ratio, the threshold of 45 for age seems to be a 
+    reasonable cutoff, as it visually separates individuals into two regions with 
+    different diabetes prevalence rates. The rectangles provide insights into 
+    the diabetic ratio in each region, supporting the choice of 45 as a 
+    meaningful threshold for categorization.")
+
+
+cat("\nwaist (-1.116e-03):\n")
+g4 = ggplot(data, aes(x = waist, y = glybh.t)) + 
+  geom_point() + 
+  geom_vline(xintercept = 33)+ 
+  geom_hline(yintercept = 1/6.5, color = "red")
+g4
+bl = nrow(filter(data, (data$glybh.t < 1/6.5) & (data$waist < 33)))
+l = nrow(filter(data,  (data$waist < 33)))  
+bl_ratio <- bl / l
+br = nrow(filter(data, (data$glybh.t < 1/6.5) & (data$waist >= 33)))
+r = nrow(filter(data,  (data$waist >= 33)))
+br_ratio <- br / r
+cat("For every one-unit increase in waist, the estimated 1/glybh decreases 
+    by -1.116e-03. This suggests that a larger waist size is associated with 
+    lower levels of glycosylated hemoglobin. The plot shows the relationship 
+    between waist size and transformed glycosylated hemoglobin levels. Vertical 
+    line at 33: A vertical line is drawn at the threshold of 33 for waist size, 
+    indicating a potential threshold for categorization. Horizontal line at 1/6.5: 
+    A horizontal line is drawn at the threshold of 1/6.5, representing the 
+    transformed glycosylated hemoglobin level. Values below this line indicate diabetes. 
+    The data is divided into two rectangles based on the thresholds: Bottom-Left 
+    Rectangle (waist < 33 and glybh.t < 1/6.5): This region represents individuals 
+    with waist size less than 33 and transformed glycosylated hemoglobin levels less 
+    than 1/6.5. The ratio of diabetic individuals in this region is 
+    calculated as follows:\n")
+cat("- Out of all patients with waist size less than 33, approximately", bl_ratio, 
+    "are diabetic.\n")
+cat("Bottom-Right Rectangle (waist >= 33 and glybh.t < 1/6.5): This region 
+    represents individuals with waist size greater than or equal to 33 and 
+    transformed glycosylated hemoglobin levels less than 1/6.5. The ratio of 
+    diabetic individuals in this region is calculated as follows:\n")
+cat("- Out of all patients with waist size greater than or equal to 33, 
+    approximately", br_ratio, "are diabetic.\n")
+cat("Similar to stab.glu, ratio, and age, the threshold of 33 for waist size 
+    seems to be a reasonable cutoff, as it visually separates individuals into
+    two regions with different diabetes prevalence rates. The rectangles provide
+    insights into the diabetic ratio in each region, supporting the choice of 
+    33 as a meaningful threshold for categorization.")
+
+cat("\ntime.ppn (-1.359e-05):\n")
+g5 = ggplot(data, aes(x = time.ppn, y = glybh.t)) + 
+  geom_point() + 
+  geom_vline(xintercept = 500)+ 
+  geom_hline(yintercept = 1/6.5, color = "red")
+g5
+bl = nrow(filter(data, (data$glybh.t < 1/6.5) & (data$time.ppn < 500)))
+l = nrow(filter(data,  (data$time.ppn < 500)))  
+bl_ratio <- bl / l
+br = nrow(filter(data, (data$glybh.t < 1/6.5) & (data$time.ppn >= 500)))
+r = nrow(filter(data,  (data$time.ppn >= 500)))
+br_ratio <- br / r
+cat("For every one-unit increase in time.ppn (time postprandial), the estimated
+    1/glybh decreases by -1.359e-05. This implies that a longer time postprandial
+    is associated with lower levels of glycosylated hemoglobin. The plot shows the
+    relationship between time postprandial and transformed glycosylated hemoglobin
+    levels. Vertical line at 500: A vertical line is drawn at the threshold of 500 
+    for time postprandial, indicating a potential threshold for categorization. 
+    Horizontal line at 1/6.5: A horizontal line is drawn at the threshold of 1/6.5,
+    representing the transformed glycosylated hemoglobin level. Values below this
+    line indicate diabetes. The data is divided into two rectangles based on the 
+    thresholds: Bottom-Left Rectangle (time.ppn < 500 and glybh.t < 1/6.5): This 
+    region represents individuals with time postprandial less than 500 and 
+    transformed glycosylated hemoglobin levels less than 1/6.5. The ratio of 
+    diabetic individuals in this region is calculated as follows:\n")
+cat("- Out of all patients with time postprandial less than 150, approximately", 
+    bl_ratio, "are diabetic.\n")
+cat("Bottom-Right Rectangle (time.ppn >= 500 and glybh.t < 1/6.5): This region 
+    represents individuals with time postprandial greater than or equal to 500 
+    and transformed glycosylated hemoglobin levels less than 1/6.5. The ratio of 
+    diabetic individuals in this region is calculated as follows:\n")
+cat("- Out of all patients with time postprandial greater than or equal to 500,
+    approximately", br_ratio, "are diabetic.\n")
+cat("Similar to stab.glu and ratio, the threshold of 500 for time postprandial 
+    seems to be a reasonable cutoff, as it visually separates individuals into 
+    two regions with different diabetes prevalence rates. The rectangles provide 
+    insights into the diabetic ratio in each region, supporting the choice of 
+    500 as a meaningful threshold for categorization.")
+
+cat("The model suggests that stab.glu, ratio, age, waist size, and time 
+    postprandial are significant predictors of glycosylated hemoglobin levels. 
+    Higher stable glucose levels, higher ratio, older age, larger waist size, 
+    and longer time postprandial are associated with lower levels of glycosylated
+    hemoglobin, which is in line with expectations for individuals with diabetes. 
+    The model has a moderate fit with an adjusted R-squared of 0.5004, indicating
+    that it explains 50.04% of the variability in glycosylated hemoglobin levels.")
+
+```
